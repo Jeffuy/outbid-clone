@@ -11,15 +11,22 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const listing = await getListing(id);
-  if (!listing) return { title: "Listing not found" };
-  const title = listing.title || listing.host;
-  const description = listing.description || `${title} is ranked #${listing.overall_rank} on ${siteConfig.siteName}.`;
+  if (!listing) return { title: "Listing not found", robots: { index: false, follow: false } };
+  const title = `${listing.host} | #${listing.overall_rank} on ${siteConfig.siteName}`;
+  const description = `${listing.host} is currently ranked #${listing.overall_rank} with a bid of ${formatMoney(listing.bid_total_cents)} on ${siteConfig.siteName}.`;
+  const image = `/product/${listing.id}/opengraph-image`;
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: `/product/${listing.id}` },
-    openGraph: { title, description, url: `/product/${listing.id}`, images: [] },
-    twitter: { title, description, images: [] },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: `/product/${listing.id}`,
+      images: [{ url: image, width: 1200, height: 630, alt: `${listing.host} leaderboard position` }],
+    },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
   };
 }
 

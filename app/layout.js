@@ -5,17 +5,23 @@ import VisitorTracker from "@/components/VisitorTracker";
 
 export const metadata = {
   metadataBase: new URL(siteConfig.siteUrl),
-  title: { default: siteConfig.siteName, template: `%s · ${siteConfig.siteName}` },
-  description: siteConfig.siteDescription,
-  alternates: { canonical: "/" },
+  title: { default: siteConfig.siteTitle, template: `%s | ${siteConfig.siteName}` },
+  description: siteConfig.socialDescription,
+  alternates: { canonical: siteConfig.siteUrl },
   openGraph: {
     type: "website",
     siteName: siteConfig.siteName,
-    title: siteConfig.siteName,
-    description: siteConfig.siteDescription,
-    url: "/",
+    title: siteConfig.siteTitle,
+    description: siteConfig.socialDescription,
+    url: siteConfig.siteUrl,
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: `${siteConfig.siteName} leaderboard` }],
   },
-  twitter: { card: "summary", title: siteConfig.siteName, description: siteConfig.siteDescription },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.siteTitle,
+    description: siteConfig.socialDescription,
+    images: ["/opengraph-image"],
+  },
 };
 
 export default function RootLayout({ children }) {

@@ -1,0 +1,130 @@
+:root {
+  --ink: #151813;
+  --muted: #667064;
+  --line: #dfe4dc;
+  --paper: #f6f7f2;
+  --card: #ffffff;
+  --accent: #275c3b;
+  --accent-dark: #173b26;
+  --gold: #b98418;
+  --radius: 18px;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.5;
+}
+a { color: inherit; }
+button, input { font: inherit; }
+button, .button { min-height: 44px; }
+
+.shell { width: min(920px, calc(100% - 32px)); margin: 0 auto; }
+.site-header { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding: 30px 0 8px; }
+.brand { font-size: 1.35rem; font-weight: 900; letter-spacing: -.04em; text-decoration: none; }
+.nav { display: flex; gap: 18px; color: var(--muted); font-size: .9rem; }
+.nav a, .stats-line a, .detail-link { text-underline-offset: 3px; }
+.stats-line { margin: 0 0 18px; color: var(--muted); font-size: .88rem; }
+
+.bid-box { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; box-shadow: 0 8px 28px rgba(28, 47, 32, .06); }
+.bid-title { margin: 0 0 14px; font-size: 1.05rem; font-weight: 750; }
+.bid-controls { display: grid; grid-template-columns: auto minmax(105px, 140px) auto minmax(220px, 1fr) auto; gap: 9px; }
+.amount-button { width: 46px; padding: 0; border: 1px solid var(--line); border-radius: 11px; background: #f8faf6; cursor: pointer; font-size: 1.3rem; }
+.amount-input, .url-input { width: 100%; min-height: 48px; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: var(--ink); }
+.amount-wrap { position: relative; }
+.amount-wrap span { position: absolute; top: 12px; left: 13px; font-weight: 800; }
+.amount-input { padding: 0 12px 0 28px; font-weight: 800; }
+.url-input { padding: 0 14px; }
+.primary-button, .button { display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 11px; padding: 0 20px; background: var(--accent); color: white; font-weight: 750; text-decoration: none; cursor: pointer; }
+.primary-button:hover, .button:hover { background: var(--accent-dark); }
+.primary-button:disabled { cursor: wait; opacity: .7; }
+.bid-note { margin: 12px 0 0; color: var(--muted); font-size: .82rem; }
+.form-error { margin: 10px 0 0; color: #a32f2a; font-size: .85rem; }
+
+.section-heading { margin: 30px 0 12px; font-size: 1rem; letter-spacing: -.01em; }
+.board { display: grid; gap: 12px; }
+.listing { position: relative; display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 15px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 17px; }
+.listing.top { grid-template-columns: 76px minmax(0, 1fr) auto; padding: 24px; }
+.listing.top-1 { border: 2px solid var(--gold); background: #fffcf3; box-shadow: 0 14px 38px rgba(115, 83, 16, .11); }
+.listing.top-2 { border-color: #9fa8af; background: #fbfcfc; }
+.listing.top-3 { border-color: #b48362; background: #fffaf7; }
+.rank { align-self: start; color: var(--muted); font-weight: 900; font-size: .9rem; }
+.top .rank { width: fit-content; border-radius: 999px; padding: 4px 9px; background: var(--ink); color: #fff; font-size: 1rem; }
+.top-1 .rank { background: var(--gold); }
+.identity { display: flex; gap: 13px; min-width: 0; }
+.favicon { position: relative; flex: 0 0 auto; width: 36px; height: 36px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: #eef1ea; font-size: 18px; }
+.top .favicon { width: 48px; height: 48px; font-size: 22px; }
+.top-1 .favicon { width: 56px; height: 56px; }
+.favicon img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 5px; background: white; }
+.listing-copy { min-width: 0; }
+.listing-title { margin: 0; font-size: 1rem; line-height: 1.25; overflow-wrap: anywhere; }
+.top .listing-title { font-size: 1.25rem; }
+.top-1 .listing-title { font-size: 1.5rem; }
+.description { margin: 5px 0; color: #475146; font-size: .91rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.meta { margin: 6px 0 0; color: var(--muted); font-size: .79rem; }
+.listing-action { min-width: 155px; text-align: right; }
+.bid-total { display: block; margin-bottom: 9px; font-size: 1.25rem; font-weight: 900; letter-spacing: -.03em; }
+.top .bid-total { font-size: 1.6rem; }
+.top-1 .bid-total { color: #7a5407; font-size: 2rem; }
+.claim-link { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 12px; border: 1px solid var(--ink); border-radius: 9px; text-decoration: none; font-size: .78rem; font-weight: 750; }
+.claim-link:hover { background: var(--ink); color: #fff; }
+
+.activity { margin: 5px 0 0; padding: 18px; border-left: 3px solid var(--accent); background: #edf2ec; border-radius: 0 12px 12px 0; }
+.activity h2 { margin: 0 0 9px; font-size: .92rem; }
+.activity p { margin: 5px 0; color: #445044; font-size: .84rem; }
+.empty { padding: 42px 20px; border: 1px dashed #bfc7bb; border-radius: 14px; text-align: center; color: var(--muted); background: rgba(255,255,255,.45); }
+.pagination { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; padding: 26px 0; }
+.pagination a, .pagination span { min-width: 38px; min-height: 38px; display: grid; place-items: center; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; text-decoration: none; font-size: .85rem; }
+.pagination .current { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.content-page { padding: 36px 0 64px; }
+.content-page h1 { margin: 0 0 10px; font-size: clamp(2rem, 6vw, 3.4rem); letter-spacing: -.055em; line-height: 1; }
+.content-page h2 { margin-top: 32px; font-size: 1.15rem; }
+.content-page p, .content-page li { color: #475146; }
+.content-page li + li { margin-top: 8px; }
+.lede { max-width: 680px; font-size: 1.05rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 26px 0 34px; }
+.stat { padding: 18px; border: 1px solid var(--line); border-radius: 13px; background: #fff; }
+.stat strong { display: block; font-size: clamp(1.35rem, 4vw, 2rem); letter-spacing: -.04em; }
+.stat span { color: var(--muted); font-size: .78rem; }
+.leader-list { padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.leader-list li { display: grid; grid-template-columns: 30px 1fr auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.leader-list a { font-weight: 700; }
+
+.product-head { display: flex; gap: 17px; align-items: center; }
+.product-head .favicon { width: 64px; height: 64px; }
+.product-head h1 { margin: 0; overflow-wrap: anywhere; }
+.product-description { max-width: 690px; font-size: 1.05rem; }
+.product-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 28px 0; }
+.metric { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+.metric strong { display: block; font-size: 1.9rem; letter-spacing: -.04em; }
+.metric span { color: var(--muted); font-size: .8rem; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 24px 0; }
+.button.secondary { background: transparent; border: 1px solid var(--ink); color: var(--ink); }
+.details { display: grid; grid-template-columns: 140px 1fr; gap: 8px 20px; max-width: 620px; }
+.details dt { color: var(--muted); }
+.details dd { margin: 0; overflow-wrap: anywhere; }
+.notice { max-width: 620px; margin: 50px auto; padding: 28px; text-align: center; border: 1px solid var(--line); border-radius: 15px; background: #fff; }
+.footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px 0 38px; border-top: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
+
+@media (max-width: 720px) {
+  .site-header { padding-top: 20px; }
+  .nav { gap: 11px; font-size: .8rem; }
+  .bid-controls { grid-template-columns: 46px 1fr 46px; }
+  .url-input, .primary-button { grid-column: 1 / -1; }
+  .listing, .listing.top { grid-template-columns: 42px minmax(0, 1fr); padding: 16px; }
+  .listing-action { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; }
+  .bid-total, .top .bid-total, .top-1 .bid-total { margin: 0; font-size: 1.3rem; }
+  .top-1 .listing-title { font-size: 1.3rem; }
+  .top .favicon, .top-1 .favicon { width: 44px; height: 44px; }
+  .description { -webkit-line-clamp: 2; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .product-metrics { grid-template-columns: 1fr; }
+  .details { grid-template-columns: 1fr; gap: 2px; }
+  .details dd { margin-bottom: 10px; }
+  .footer { flex-direction: column; }
+}

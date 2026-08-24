@@ -1,6 +1,6 @@
 create extension if not exists pgcrypto;
 
-create table if not exists public.listings (
+create table public.listings (
   id uuid primary key default gen_random_uuid(),
   url text not null,
   normalized_url text unique not null,
@@ -17,7 +17,7 @@ create table if not exists public.listings (
   bid_reached_at timestamptz not null default now()
 );
 
-create table if not exists public.payments (
+create table public.payments (
   id uuid primary key default gen_random_uuid(),
   listing_id uuid references public.listings(id),
   submitted_url text not null,
@@ -27,40 +27,22 @@ create table if not exists public.payments (
   charge_amount_cents bigint not null check (charge_amount_cents > 0 and charge_amount_cents % 100 = 0),
   paypal_order_id text unique,
   paypal_capture_id text unique,
-  status text not null constraint payments_status_check check (status in ('pending', 'completed', 'failed', 'stale', 'expired')),
-  capture_locked_at timestamptz,
+  status text not null check (status in ('pending', 'capturing', 'completed', 'failed', 'stale', 'expired')),
+  capture_started_at timestamptz,
   created_at timestamptz not null default now(),
   completed_at timestamptz,
-  constraint payments_charge_matches_base check (charge_amount_cents = target_total_cents - base_total_cents)
+  constraint payments_charge_matches_base check (charge_amount_cents = target_total_cents - base_total_cents),
+  constraint payments_capture_time_matches_state check (status <> 'capturing' or capture_started_at is not null)
 );
 
--- Safe when rerunning this file against the earlier MVP schema.
-alter table public.payments add column if not exists base_total_cents bigint not null default 0;
-alter table public.payments add column if not exists capture_locked_at timestamptz;
-update public.payments
-set base_total_cents = target_total_cents - charge_amount_cents
-where base_total_cents = 0 and target_total_cents - charge_amount_cents > 0;
-alter table public.payments drop constraint if exists payments_status_check;
-alter table public.payments add constraint payments_status_check check (status in ('pending', 'completed', 'failed', 'stale', 'expired'));
-
-do $$
-begin
-  if not exists (select 1 from pg_constraint where conname = 'payments_base_total_check' and conrelid = 'public.payments'::regclass) then
-    alter table public.payments add constraint payments_base_total_check check (base_total_cents >= 0 and base_total_cents % 100 = 0);
-  end if;
-  if not exists (select 1 from pg_constraint where conname = 'payments_charge_matches_base' and conrelid = 'public.payments'::regclass) then
-    alter table public.payments add constraint payments_charge_matches_base check (charge_amount_cents = target_total_cents - base_total_cents);
-  end if;
-end $$;
-
-create table if not exists public.visitors (
+create table public.visitors (
   visitor_id uuid primary key,
   first_seen timestamptz not null default now(),
   last_seen timestamptz not null default now(),
   page_views bigint not null default 1 check (page_views >= 0)
 );
 
-create table if not exists public.rate_limits (
+create table public.rate_limits (
   key_hash text not null check (length(key_hash) = 64),
   bucket bigint not null,
   request_count integer not null default 1 check (request_count > 0),
@@ -68,7 +50,7 @@ create table if not exists public.rate_limits (
   primary key (key_hash, bucket)
 );
 
-create table if not exists public.click_dedup (
+create table public.click_dedup (
   listing_id uuid not null references public.listings(id) on delete cascade,
   identity_hash text not null check (length(identity_hash) = 64),
   bucket bigint not null,
@@ -76,15 +58,13 @@ create table if not exists public.click_dedup (
   primary key (listing_id, identity_hash, bucket)
 );
 
-create index if not exists listings_ranking_idx on public.listings (bid_total_cents desc, bid_reached_at asc) where status = 'active';
-create index if not exists payments_recent_completed_idx on public.payments (completed_at desc) where status = 'completed';
-create index if not exists payments_normalized_url_idx on public.payments (normalized_url, created_at desc);
-create index if not exists payments_capture_lease_idx on public.payments (normalized_url, capture_locked_at) where status = 'pending';
-create index if not exists visitors_last_seen_idx on public.visitors (last_seen desc);
-create index if not exists rate_limits_expiry_idx on public.rate_limits (expires_at);
-create index if not exists click_dedup_expiry_idx on public.click_dedup (expires_at);
-
-update public.listings set favicon_url = null where favicon_url is not null;
+create index listings_ranking_idx on public.listings (bid_total_cents desc, bid_reached_at asc) where status = 'active';
+create index payments_recent_completed_idx on public.payments (completed_at desc) where status = 'completed';
+create index payments_state_idx on public.payments (normalized_url, status, created_at desc);
+create unique index payments_one_capturing_per_url_idx on public.payments (normalized_url) where status = 'capturing';
+create index visitors_last_seen_idx on public.visitors (last_seen desc);
+create index rate_limits_expiry_idx on public.rate_limits (expires_at);
+create index click_dedup_expiry_idx on public.click_dedup (expires_at);
 
 alter table public.listings enable row level security;
 alter table public.payments enable row level security;
@@ -105,9 +85,7 @@ declare
   bucket_value bigint;
   current_count integer;
 begin
-  if length(limit_key) <> 64 or max_requests < 1 or window_seconds < 1 then
-    raise exception 'invalid_rate_limit';
-  end if;
+  if length(limit_key) <> 64 or max_requests < 1 or window_seconds < 1 then raise exception 'invalid_rate_limit'; end if;
   bucket_value := floor(extract(epoch from clock_timestamp()) / window_seconds)::bigint;
   insert into public.rate_limits (key_hash, bucket, request_count, expires_at)
   values (limit_key, bucket_value, 1, now() + make_interval(secs => window_seconds * 2))
@@ -115,10 +93,7 @@ begin
   set request_count = public.rate_limits.request_count + 1,
       expires_at = excluded.expires_at
   returning request_count into current_count;
-
-  if random() < 0.01 then
-    delete from public.rate_limits where expires_at < now();
-  end if;
+  if random() < 0.01 then delete from public.rate_limits where expires_at < now(); end if;
   return current_count <= max_requests;
 end;
 $$;
@@ -137,19 +112,15 @@ begin
   if length(identity_hash) <> 64 then raise exception 'invalid_identity_hash'; end if;
   select l.url into destination from public.listings l where l.id = listing_uuid and l.status = 'active';
   if not found then return; end if;
-
   bucket_value := floor(extract(epoch from clock_timestamp()) / 600)::bigint;
   insert into public.click_dedup (listing_id, identity_hash, bucket, expires_at)
   values (listing_uuid, identity_hash, bucket_value, now() + interval '20 minutes')
   on conflict do nothing;
   get diagnostics inserted_count = row_count;
-
   if inserted_count = 1 then
     update public.listings set click_count = click_count + 1, updated_at = now() where id = listing_uuid;
   end if;
-  if random() < 0.01 then
-    delete from public.click_dedup where expires_at < now();
-  end if;
+  if random() < 0.01 then delete from public.click_dedup where expires_at < now(); end if;
   return query select destination, inserted_count = 1;
 end;
 $$;
@@ -169,7 +140,7 @@ begin
 end;
 $$;
 
-create or replace function public.acquire_capture_lease(payment_uuid uuid, expected_order_id text)
+create or replace function public.begin_payment_capture(payment_uuid uuid, expected_order_id text)
 returns text
 language plpgsql
 security definer
@@ -183,52 +154,63 @@ begin
   if not found then raise exception 'payment_not_found'; end if;
   if payment_row.paypal_order_id is distinct from expected_order_id then raise exception 'order_mismatch'; end if;
   if payment_row.status = 'completed' then return 'completed'; end if;
+  if payment_row.status = 'capturing' then return 'capturing'; end if;
   if payment_row.status <> 'pending' then return payment_row.status; end if;
   if payment_row.created_at < now() - interval '30 minutes' then
-    update public.payments set status = 'expired', capture_locked_at = null where id = payment_uuid;
+    update public.payments set status = 'expired' where id = payment_uuid;
     return 'expired';
   end if;
-  if payment_row.capture_locked_at >= now() - interval '2 minutes' then return 'busy'; end if;
 
   perform pg_advisory_xact_lock(hashtextextended(payment_row.normalized_url, 0));
   if exists (
     select 1 from public.payments p
     where p.normalized_url = payment_row.normalized_url
       and p.id <> payment_uuid
-      and p.status = 'pending'
-      and p.capture_locked_at >= now() - interval '2 minutes'
-  ) then return 'busy'; end if;
+      and p.status = 'capturing'
+  ) then return 'blocked'; end if;
 
   select * into listing_row from public.listings
   where normalized_url = payment_row.normalized_url
   for update;
-
   if found then
     if listing_row.status <> 'active' or listing_row.bid_total_cents <> payment_row.base_total_cents then
-      update public.payments set status = 'stale', capture_locked_at = null where id = payment_uuid;
+      update public.payments set status = 'stale' where id = payment_uuid;
       return 'stale';
     end if;
   elsif payment_row.base_total_cents <> 0 then
-    update public.payments set status = 'stale', capture_locked_at = null where id = payment_uuid;
+    update public.payments set status = 'stale' where id = payment_uuid;
+    return 'stale';
+  end if;
+  if payment_row.charge_amount_cents <> payment_row.target_total_cents - payment_row.base_total_cents then
+    update public.payments set status = 'stale' where id = payment_uuid;
     return 'stale';
   end if;
 
-  if payment_row.charge_amount_cents <> payment_row.target_total_cents - payment_row.base_total_cents then
-    update public.payments set status = 'stale', capture_locked_at = null where id = payment_uuid;
-    return 'stale';
-  end if;
-  update public.payments set capture_locked_at = now() where id = payment_uuid;
+  update public.payments
+  set status = 'capturing', capture_started_at = now()
+  where id = payment_uuid;
   return 'acquired';
 end;
 $$;
 
-create or replace function public.release_capture_lease(payment_uuid uuid)
-returns void
-language sql
+create or replace function public.fail_payment_capture(payment_uuid uuid, expected_order_id text)
+returns text
+language plpgsql
 security definer
 set search_path = public
 as $$
-  update public.payments set capture_locked_at = null where id = payment_uuid and status = 'pending';
+declare
+  payment_row public.payments%rowtype;
+begin
+  select * into payment_row from public.payments where id = payment_uuid for update;
+  if not found then raise exception 'payment_not_found'; end if;
+  if payment_row.paypal_order_id is distinct from expected_order_id then raise exception 'order_mismatch'; end if;
+  if payment_row.status = 'completed' then return 'completed'; end if;
+  if payment_row.status <> 'capturing' then return payment_row.status; end if;
+  perform pg_advisory_xact_lock(hashtextextended(payment_row.normalized_url, 0));
+  update public.payments set status = 'failed' where id = payment_uuid;
+  return 'failed';
+end;
 $$;
 
 create or replace function public.get_public_stats()
@@ -347,7 +329,7 @@ begin
   if not found then raise exception 'payment_not_found'; end if;
   if payment_row.paypal_order_id is distinct from expected_order_id then raise exception 'order_mismatch'; end if;
   if payment_row.status = 'completed' then return payment_row.listing_id; end if;
-  if payment_row.status <> 'pending' then raise exception 'payment_not_pending'; end if;
+  if payment_row.status <> 'capturing' then raise exception 'payment_not_capturing'; end if;
   if payment_row.charge_amount_cents <> payment_row.target_total_cents - payment_row.base_total_cents then
     raise exception 'payment_amount_mismatch';
   end if;
@@ -359,7 +341,6 @@ begin
   select * into listing_row from public.listings
   where normalized_url = payment_row.normalized_url
   for update;
-
   if not found then
     if payment_row.base_total_cents <> 0 then raise exception 'stale_payment'; end if;
     insert into public.listings (
@@ -367,7 +348,7 @@ begin
       bid_total_cents, last_bid_at, bid_reached_at
     ) values (
       listing_url, payment_row.normalized_url, listing_host, listing_title,
-      listing_description, listing_favicon_url, payment_row.target_total_cents,
+      listing_description, null, payment_row.target_total_cents,
       completion_time, completion_time
     ) returning id into result_listing_id;
   else
@@ -389,20 +370,17 @@ begin
   set listing_id = result_listing_id,
       paypal_capture_id = capture_id,
       status = 'completed',
-      capture_locked_at = null,
       completed_at = completion_time
   where id = payment_uuid;
   return result_listing_id;
 end;
 $$;
 
-drop function if exists public.increment_listing_click(uuid);
-
 revoke all on function public.check_rate_limit(text, integer, integer) from public, anon, authenticated;
 revoke all on function public.track_listing_click(uuid, text) from public, anon, authenticated;
 revoke all on function public.record_visit(uuid, boolean) from public, anon, authenticated;
-revoke all on function public.acquire_capture_lease(uuid, text) from public, anon, authenticated;
-revoke all on function public.release_capture_lease(uuid) from public, anon, authenticated;
+revoke all on function public.begin_payment_capture(uuid, text) from public, anon, authenticated;
+revoke all on function public.fail_payment_capture(uuid, text) from public, anon, authenticated;
 revoke all on function public.get_public_stats() from public, anon, authenticated;
 revoke all on function public.get_listing_with_rank(uuid) from public, anon, authenticated;
 revoke all on function public.get_recent_activity() from public, anon, authenticated;
@@ -411,8 +389,8 @@ revoke all on function public.complete_payment(uuid, text, text, text, text, tex
 grant execute on function public.check_rate_limit(text, integer, integer) to service_role;
 grant execute on function public.track_listing_click(uuid, text) to service_role;
 grant execute on function public.record_visit(uuid, boolean) to service_role;
-grant execute on function public.acquire_capture_lease(uuid, text) to service_role;
-grant execute on function public.release_capture_lease(uuid) to service_role;
+grant execute on function public.begin_payment_capture(uuid, text) to service_role;
+grant execute on function public.fail_payment_capture(uuid, text) to service_role;
 grant execute on function public.get_public_stats() to service_role;
 grant execute on function public.get_listing_with_rank(uuid) to service_role;
 grant execute on function public.get_recent_activity() to service_role;

@@ -25,6 +25,16 @@ export async function POST(request) {
 
     const submitted = await validateSubmittedUrl(body.url);
     supabase = requireSupabase();
+    const { data: capturing, error: capturingError } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("normalized_url", submitted.normalizedUrl)
+      .eq("status", "capturing")
+      .limit(1)
+      .maybeSingle();
+    if (capturingError) throw capturingError;
+    if (capturing) return publicError("A payment for this URL is still being verified. Please try again shortly.", 409);
+
     const { data: listing, error: listingError } = await supabase
       .from("listings")
       .select("id,bid_total_cents,status")

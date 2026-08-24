@@ -5,9 +5,9 @@ import { useState } from "react";
 const MIN = 1;
 const MAX = 999999;
 
-export default function BidBox({ initialAmount, initialUrl = "" }) {
+export default function BidBox({ initialAmount }) {
   const [amount, setAmount] = useState(Math.min(MAX, Math.max(MIN, Number(initialAmount) || MIN)));
-  const [url, setUrl] = useState(initialUrl);
+  const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createPayPalOrder } from "@/lib/paypal";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { requireSupabase } from "@/lib/supabase";
 import { validateSubmittedUrl } from "@/lib/urls";
 
@@ -13,6 +14,11 @@ export async function POST(request) {
   let paymentId;
   let supabase;
   try {
+    const rateLimit = await checkRateLimit(request, { scope: "create-order", limit: 10, windowSeconds: 600 });
+    if (rateLimit === null) return publicError("Checkout is temporarily unavailable. Please try again.", 503);
+    if (!rateLimit) {
+      return publicError("Too many checkout attempts. Please try again later.", 429);
+    }
     const body = await request.json();
     if (!Number.isInteger(body.targetTotal)) return publicError("Bid total must be a whole US dollar amount.");
     if (body.targetTotal < 1 || body.targetTotal > 999999) return publicError("Bid total must be between $1 and $999,999.");
@@ -39,6 +45,7 @@ export async function POST(request) {
         listing_id: listing?.id || null,
         submitted_url: submitted.displayUrl,
         normalized_url: submitted.normalizedUrl,
+        base_total_cents: currentCents,
         target_total_cents: targetCents,
         charge_amount_cents: chargeCents,
         status: "pending",

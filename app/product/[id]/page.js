@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CopyButton from "@/components/CopyButton";
+import SafeFavicon from "@/components/SafeFavicon";
 import { siteConfig } from "@/config/site";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { getListing } from "@/lib/leaderboard";
@@ -30,7 +31,7 @@ export default async function ProductPage({ params }) {
   return (
     <article className="content-page">
       <div className="product-head">
-        <span className="favicon" aria-hidden="true">◎{listing.favicon_url && <img src={listing.favicon_url} alt="" />}</span>
+        <SafeFavicon host={listing.host} />
         <div><h1>{listing.title || listing.host}</h1><span>{listing.host}</span></div>
       </div>
       {listing.description && <p className="product-description">{listing.description}</p>}
@@ -41,7 +42,7 @@ export default async function ProductPage({ params }) {
       </div>
       <div className="actions">
         <a className="button" href={`/go/${listing.id}`} rel="sponsored nofollow">Visit product</a>
-        <Link className="button" href={`/?url=${encodeURIComponent(listing.url)}&amount=${nextBid / 100}#bid`}>Outbid for {formatMoney(nextBid)}</Link>
+        <Link className="button" href={`/?amount=${nextBid / 100}#bid`}>Outbid for {formatMoney(nextBid)}</Link>
         <CopyButton />
       </div>
       <dl className="details">

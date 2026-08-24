@@ -10,7 +10,7 @@ export default function PrivacyPage() {
       <h2>Anonymous traffic data</h2>
       <p>We set an anonymous visitor UUID cookie. We store that ID with first-seen time, last-seen time, and a page-view count. A lightweight heartbeat updates last-seen time so the public online count can be estimated.</p>
       <h2>Public counters</h2>
-      <p>Outbound visits pass through our redirect route, which increments the listing’s public click counter.</p>
+      <p>Outbound visits pass through our redirect route. Obvious repeat clicks are filtered using short-lived, one-way identity hashes; raw IP addresses are not stored in the click or rate-limit records.</p>
       <h2>Payments and storage</h2>
       <p>PayPal processes payment details. We store PayPal order and capture references, bid amounts, payment status, submitted URLs, and timestamps in Supabase. We do not receive or store payment card details.</p>
       <h2>Contact</h2>

@@ -5,8 +5,14 @@ import { verifyPayPalWebhook } from "@/lib/paypal";
 export const runtime = "nodejs";
 
 export async function POST(request) {
+  const rawBody = await request.text();
+  let event;
   try {
-    const event = await request.json();
+    event = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+  try {
     const verified = await verifyPayPalWebhook(request.headers, event);
     if (!verified) return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     if (event.event_type !== "PAYMENT.CAPTURE.COMPLETED") return NextResponse.json({ received: true });

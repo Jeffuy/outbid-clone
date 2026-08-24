@@ -29,7 +29,7 @@ export default async function Home({ searchParams }) {
         {formatNumber(stats.online_now)} online · {formatNumber(stats.visitors_since_launch)} visitors since launch ·{" "}
         <Link href="/stats">View live stats</Link>
       </p>
-      <BidBox initialAmount={initialAmount} initialUrl={params?.url || ""} />
+      <BidBox initialAmount={initialAmount} />
       <h2 className="section-heading">Leaderboard</h2>
       {board.unavailable ? (
         <div className="empty">The leaderboard is temporarily unavailable.</div>

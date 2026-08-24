@@ -1,24 +1,16 @@
 import Link from "next/link";
 import { formatMoney, formatNumber, timeAgo } from "@/lib/format";
-
-function Favicon({ listing }) {
-  return (
-    <span className="favicon" aria-hidden="true">
-      ◎
-      {listing.favicon_url && <img src={listing.favicon_url} alt="" loading="lazy" />}
-    </span>
-  );
-}
+import SafeFavicon from "@/components/SafeFavicon";
 
 export default function ListingCard({ listing, rank }) {
   const premium = rank <= 3;
   const target = Number(listing.bid_total_cents) / 100 + 1;
-  const claimHref = `/?url=${encodeURIComponent(listing.url)}&amount=${target}#bid`;
+  const claimHref = `/?amount=${target}#bid`;
   return (
     <article className={`listing ${premium ? `top top-${rank}` : ""}`}>
       <span className="rank">#{rank}</span>
       <div className="identity">
-        <Favicon listing={listing} />
+        <SafeFavicon host={listing.host} />
         <div className="listing-copy">
           <h2 className="listing-title">{listing.title || listing.host}</h2>
           {listing.description && <p className="description">{listing.description}</p>}

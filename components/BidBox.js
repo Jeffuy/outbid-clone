@@ -97,7 +97,7 @@ export default function BidBox({ initialAmount }) {
         </div>
         {error && <p className="form-error" role="alert">{error}</p>}
       </form>
-      <p className="bid-note">Paying less than the #1 price still puts you on the board wherever that bid can take you. You buy a bid total, not a permanent rank.</p>
+      <p className="bid-note"><strong>Bid higher. Climb higher.</strong>{" "}Paying less than the #1 price still puts you on the board wherever that bid can take you. You buy a bid total, not a permanent rank.</p>
     </section>
   );
 }

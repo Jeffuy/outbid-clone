@@ -5,8 +5,10 @@ export function BrandMark({ size = 72 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
       <rect width="64" height="64" rx="14" fill="#151813" stroke="#d6a538" strokeWidth="1.5" />
-      <path d="M9 54V43h13v11H9Zm17 0V35h12v19H26Zm16 0V27h13v27H42Z" fill="#f6f7f2" />
-      <path d="M32 36V12m0 0L22 22m10-10 10 10" fill="none" stroke="#d6a538" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="m13 45 13-13 9 9 16-18" fill="none" stroke="#f6f7f2" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M41 23h10v10" fill="none" stroke="#d6a538" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="13" cy="45" r="4" fill="#d6a538" />
+      <circle cx="26" cy="32" r="4" fill="#d6a538" />
     </svg>
   );
 }
@@ -15,7 +17,7 @@ function configuredDomain() {
   try {
     return new URL(siteConfig.siteUrl).hostname;
   } catch {
-    return "rankpay.lol";
+    return "linkclimb.lol";
   }
 }
 

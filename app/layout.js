@@ -1,7 +1,11 @@
 import "@/app/globals.css";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
 import VisitorTracker from "@/components/VisitorTracker";
+import WebVitals from "@/components/WebVitals";
+
+const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata = {
   metadataBase: new URL(siteConfig.siteUrl),
@@ -29,6 +33,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <VisitorTracker />
+        <WebVitals />
         <div className="shell">
           <header className="site-header">
             <Link href="/" className="brand">{siteConfig.siteName}</Link>
@@ -47,6 +52,7 @@ export default function RootLayout({ children }) {
           </footer>
         </div>
       </body>
+      {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
     </html>
   );
 }

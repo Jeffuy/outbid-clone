@@ -22,6 +22,8 @@ create table public.payments (
   listing_id uuid references public.listings(id),
   submitted_url text not null,
   normalized_url text not null,
+  listing_title text check (listing_title is null or char_length(listing_title) between 1 and 80),
+  listing_description text check (listing_description is null or char_length(listing_description) between 1 and 160),
   base_total_cents bigint not null default 0 check (base_total_cents >= 0 and base_total_cents % 100 = 0),
   target_total_cents bigint not null check (target_total_cents between 100 and 99999900 and target_total_cents % 100 = 0),
   charge_amount_cents bigint not null check (charge_amount_cents > 0 and charge_amount_cents % 100 = 0),
@@ -309,10 +311,7 @@ create or replace function public.complete_payment(
   expected_order_id text,
   capture_id text,
   listing_url text,
-  listing_host text,
-  listing_title text,
-  listing_description text,
-  listing_favicon_url text
+  listing_host text
 )
 returns uuid
 language plpgsql
@@ -347,8 +346,9 @@ begin
       url, normalized_url, host, title, description, favicon_url,
       bid_total_cents, last_bid_at, bid_reached_at
     ) values (
-      listing_url, payment_row.normalized_url, listing_host, listing_title,
-      listing_description, null, payment_row.target_total_cents,
+      listing_url, payment_row.normalized_url, listing_host,
+      coalesce(nullif(payment_row.listing_title, ''), listing_host),
+      nullif(payment_row.listing_description, ''), null, payment_row.target_total_cents,
       completion_time, completion_time
     ) returning id into result_listing_id;
   else
@@ -359,8 +359,12 @@ begin
     set bid_total_cents = payment_row.target_total_cents,
         bid_reached_at = completion_time,
         last_bid_at = completion_time,
-        title = coalesce(nullif(title, ''), listing_title),
-        description = coalesce(description, listing_description),
+        title = coalesce(
+          nullif(nullif(payment_row.listing_title, ''), listing_host),
+          nullif(listing_row.title, ''),
+          listing_host
+        ),
+        description = coalesce(nullif(payment_row.listing_description, ''), listing_row.description),
         favicon_url = null,
         updated_at = completion_time
     where id = result_listing_id;
@@ -384,7 +388,7 @@ revoke all on function public.fail_payment_capture(uuid, text) from public, anon
 revoke all on function public.get_public_stats() from public, anon, authenticated;
 revoke all on function public.get_listing_with_rank(uuid) from public, anon, authenticated;
 revoke all on function public.get_recent_activity() from public, anon, authenticated;
-revoke all on function public.complete_payment(uuid, text, text, text, text, text, text, text) from public, anon, authenticated;
+revoke all on function public.complete_payment(uuid, text, text, text, text) from public, anon, authenticated;
 
 grant execute on function public.check_rate_limit(text, integer, integer) to service_role;
 grant execute on function public.track_listing_click(uuid, text) to service_role;
@@ -394,4 +398,4 @@ grant execute on function public.fail_payment_capture(uuid, text) to service_rol
 grant execute on function public.get_public_stats() to service_role;
 grant execute on function public.get_listing_with_rank(uuid) to service_role;
 grant execute on function public.get_recent_activity() to service_role;
-grant execute on function public.complete_payment(uuid, text, text, text, text, text, text, text) to service_role;
+grant execute on function public.complete_payment(uuid, text, text, text, text) to service_role;

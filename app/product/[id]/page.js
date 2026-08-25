@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TrackEventOnMount, TrackedAnchor, TrackedLink } from "@/components/AnalyticsEvents";
 import CopyButton from "@/components/CopyButton";
 import SafeFavicon from "@/components/SafeFavicon";
 import { siteConfig } from "@/config/site";
@@ -35,8 +35,25 @@ export default async function ProductPage({ params }) {
   const listing = await getListing(id);
   if (!listing) notFound();
   const nextBid = Number(listing.bid_total_cents) + 100;
+  const currentBidUsd = Number(listing.bid_total_cents) / 100;
+  const targetBidUsd = nextBid / 100;
   return (
     <article className="content-page">
+      <TrackEventOnMount
+        name="view_item"
+        params={{
+          currency: "USD",
+          value: currentBidUsd,
+          rank: listing.overall_rank,
+          items: [{
+            item_id: listing.id,
+            item_name: listing.host,
+            item_category: "ranked_listing",
+            price: currentBidUsd,
+            quantity: 1,
+          }],
+        }}
+      />
       <div className="product-head">
         <SafeFavicon host={listing.host} />
         <div><h1>{listing.title || listing.host}</h1><span>{listing.host}</span></div>
@@ -48,9 +65,32 @@ export default async function ProductPage({ params }) {
         <div className="metric"><strong>{formatNumber(listing.click_count)}</strong><span>Outbound clicks</span></div>
       </div>
       <div className="actions">
-        <a className="button" href={`/go/${listing.id}`} target="_blank" rel="sponsored nofollow noopener">Visit product</a>
-        <Link className="button" href={`/?amount=${nextBid / 100}#bid`}>Outbid for {formatMoney(nextBid)}</Link>
-        <CopyButton />
+        <TrackedAnchor
+          className="button"
+          href={`/go/${listing.id}`}
+          target="_blank"
+          rel="sponsored nofollow noopener"
+          eventName="listing_visit"
+          eventParams={{ listing_id: listing.id, hostname: listing.host, rank: listing.overall_rank, source: "product" }}
+        >
+          Visit product
+        </TrackedAnchor>
+        <TrackedLink
+          className="button"
+          href={`/?amount=${targetBidUsd}#bid`}
+          eventName="outbid_click"
+          eventParams={{
+            source: "product",
+            listing_id: listing.id,
+            hostname: listing.host,
+            rank: listing.overall_rank,
+            current_bid_usd: currentBidUsd,
+            target_bid_usd: targetBidUsd,
+          }}
+        >
+          Outbid for {formatMoney(nextBid)}
+        </TrackedLink>
+        <CopyButton listingId={listing.id} />
       </div>
       <dl className="details">
         <dt>First listed</dt><dd>{new Date(listing.created_at).toLocaleDateString("en-US", { dateStyle: "long" })}</dd>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 export default function PaymentCapture({ orderId }) {
   const started = useRef(false);
@@ -17,7 +18,32 @@ export default function PaymentCapture({ orderId }) {
     })
       .then(async (response) => {
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "We could not confirm the payment.");
+        if (!response.ok || result.completed !== true) throw new Error(result.error || "We could not confirm the payment.");
+        const chargeAmountCents = Number(result.analytics?.chargeAmountCents);
+        const targetTotalCents = Number(result.analytics?.targetTotalCents);
+        const hostname = result.analytics?.hostname;
+        if (
+          typeof result.paymentId === "string" && result.paymentId &&
+          typeof hostname === "string" && hostname &&
+          Number.isSafeInteger(chargeAmountCents) && chargeAmountCents > 0 &&
+          Number.isSafeInteger(targetTotalCents) && targetTotalCents >= chargeAmountCents
+        ) {
+          const chargeUsd = chargeAmountCents / 100;
+          trackEvent("purchase", {
+            transaction_id: result.paymentId,
+            currency: "USD",
+            value: chargeUsd,
+            listing_id: result.listingId,
+            target_bid_usd: targetTotalCents / 100,
+            items: [{
+              item_id: hostname,
+              item_name: hostname,
+              item_category: "paid_listing",
+              price: chargeUsd,
+              quantity: 1,
+            }],
+          });
+        }
         setState({ status: "done", message: "Payment complete. Your listing is live." });
       })
       .catch((error) => setState({ status: "error", message: error.message }));

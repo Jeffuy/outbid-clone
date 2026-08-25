@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getListingMetadata } from "@/lib/metadata";
 import { createPayPalOrder } from "@/lib/paypal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireSupabase } from "@/lib/supabase";
@@ -49,12 +50,15 @@ export async function POST(request) {
       return publicError(`Choose a total of at least $${currentCents / 100 + 1} for this URL.`, 409);
     }
     const chargeCents = targetCents - currentCents;
+    const metadata = await getListingMetadata(submitted.displayUrl);
     const { data: payment, error: paymentError } = await supabase
       .from("payments")
       .insert({
         listing_id: listing?.id || null,
         submitted_url: submitted.displayUrl,
         normalized_url: submitted.normalizedUrl,
+        listing_title: metadata.title,
+        listing_description: metadata.description,
         base_total_cents: currentCents,
         target_total_cents: targetCents,
         charge_amount_cents: chargeCents,
@@ -70,7 +74,15 @@ export async function POST(request) {
     if (!order.id || !approvalUrl) throw new Error("PayPal did not provide an approval link");
     const { error: updateError } = await supabase.from("payments").update({ paypal_order_id: order.id }).eq("id", payment.id).eq("status", "pending");
     if (updateError) throw updateError;
-    return NextResponse.json({ approvalUrl });
+    return NextResponse.json({
+      approvalUrl,
+      paymentId: payment.id,
+      analytics: {
+        hostname: submitted.host,
+        chargeAmountCents: chargeCents,
+        targetTotalCents: targetCents,
+      },
+    });
   } catch (error) {
     if (paymentId && supabase) await supabase.from("payments").update({ status: "failed" }).eq("id", paymentId).is("paypal_order_id", null);
     const message = error.message?.toLowerCase() || "";

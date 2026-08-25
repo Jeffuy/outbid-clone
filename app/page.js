@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TrackedAnchor } from "@/components/AnalyticsEvents";
 import BidBox from "@/components/BidBox";
 import ListingCard from "@/components/ListingCard";
 import Pagination from "@/components/Pagination";
@@ -45,14 +46,21 @@ export default async function Home({ searchParams }) {
               <h2>Latest activity</h2>
               {activity.map((item) => (
                 <p key={item.id}>
-                  <a
+                  <TrackedAnchor
                     className="hostname-link"
                     href={`/go/${item.listing_id}`}
                     target="_blank"
                     rel="sponsored nofollow noopener"
+                    eventName="listing_visit"
+                    eventParams={{
+                      listing_id: item.listing_id,
+                      hostname: item.host,
+                      rank: item.overall_rank,
+                      source: "latest_activity",
+                    }}
                   >
                     {item.host}
-                  </a>{" "}
+                  </TrackedAnchor>{" "}
                   at #{item.overall_rank} · {formatMoney(item.target_total_cents)} · {timeAgo(item.completed_at)}
                 </p>
               ))}

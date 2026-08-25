@@ -1,9 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 const MIN = 1;
 const MAX = 999999;
+
+function checkoutErrorReason(status, message) {
+  if (status === 429) return "rate_limited";
+  if (status === 409 && message?.startsWith("Choose a total")) return "stale_bid";
+  if (status >= 500 || status === 409) return "payment_unavailable";
+  if (status >= 400) return "invalid_url";
+  return "unknown";
+}
 
 export default function BidBox({ initialAmount }) {
   const [amount, setAmount] = useState(Math.min(MAX, Math.max(MIN, Number(initialAmount) || MIN)));
@@ -20,19 +29,44 @@ export default function BidBox({ initialAmount }) {
     event.preventDefault();
     setError("");
     setLoading(true);
+    trackEvent("bid_submit", { target_bid_usd: amount });
+
+    let result;
+    let response;
     try {
-      const response = await fetch("/api/paypal/create-order", {
+      response = await fetch("/api/paypal/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url, targetTotal: amount }),
       });
-      const result = await response.json();
+      result = await response.json();
       if (!response.ok || !result.approvalUrl) throw new Error(result.error || "Payment could not be started.");
-      window.location.assign(result.approvalUrl);
     } catch (caught) {
+      trackEvent("checkout_error", {
+        reason: checkoutErrorReason(response?.status, result?.error),
+      });
       setError(caught.message || "Payment could not be started.");
       setLoading(false);
+      return;
     }
+
+    const chargeUsd = Number(result.analytics?.chargeAmountCents) / 100;
+    const targetBidUsd = Number(result.analytics?.targetTotalCents) / 100;
+    const hostname = result.analytics?.hostname;
+    trackEvent("begin_checkout", {
+      currency: "USD",
+      value: chargeUsd,
+      target_bid_usd: targetBidUsd,
+      hostname,
+      items: [{
+        item_id: hostname,
+        item_name: hostname,
+        item_category: "paid_listing",
+        price: chargeUsd,
+        quantity: 1,
+      }],
+    });
+    window.location.assign(result.approvalUrl);
   }
 
   return (

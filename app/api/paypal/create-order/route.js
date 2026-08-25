@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getListingMetadata } from "@/lib/metadata";
-import { createPayPalOrder } from "@/lib/paypal";
+import { createPayPalOrder, PayPalError } from "@/lib/paypal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireSupabase } from "@/lib/supabase";
 import { validateSubmittedUrl } from "@/lib/urls";
@@ -86,10 +86,20 @@ export async function POST(request) {
   } catch (error) {
     if (paymentId && supabase) await supabase.from("payments").update({ status: "failed" }).eq("id", paymentId).is("paypal_order_id", null);
     const message = error.message?.toLowerCase() || "";
-    if (message.includes("private") || message.includes("public") || message.includes("url") || message.includes("resolved") || message.includes("shortener")) {
+    if (!(error instanceof PayPalError) && (message.includes("private") || message.includes("public") || message.includes("url") || message.includes("resolved") || message.includes("shortener"))) {
       return publicError(error.message);
     }
-    console.error("Create order failed", { name: error.name, status: error.status });
+    if (error instanceof PayPalError) {
+      console.error("Create order failed", {
+        name: error.name,
+        status: error.status,
+        paypalName: error.paypalName,
+        issues: error.issues,
+        debugId: error.debugId,
+      });
+    } else {
+      console.error("Create order failed", { name: error.name, status: error.status });
+    }
     return publicError("Payment could not be started. Please try again.", 503);
   }
 }

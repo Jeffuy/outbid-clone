@@ -15,8 +15,6 @@ export default function TermsPage() {
       <p>Payments are processed by PayPal. If a bid changes before capture, the stale checkout is rejected without capture. A completed charge is not automatically refundable. Chargebacks or fraud may result in listing removal. The service is provided as available without guaranteed uptime.</p>
       <h2>Public numbers</h2>
       <p>Traffic and click totals are informational and may be filtered to reduce obvious duplicate or abusive activity.</p>
-      <h2>Operator</h2>
-      <p>{siteConfig.operatorName}<br />{siteConfig.operatorAddress}<br /><a href={`mailto:${siteConfig.contactEmail}`}>{siteConfig.contactEmail}</a></p>
     </article>
   );
 }

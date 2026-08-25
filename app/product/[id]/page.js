@@ -48,7 +48,7 @@ export default async function ProductPage({ params }) {
         <div className="metric"><strong>{formatNumber(listing.click_count)}</strong><span>Outbound clicks</span></div>
       </div>
       <div className="actions">
-        <a className="button" href={`/go/${listing.id}`} rel="sponsored nofollow">Visit product</a>
+        <a className="button" href={`/go/${listing.id}`} target="_blank" rel="sponsored nofollow noopener">Visit product</a>
         <Link className="button" href={`/?amount=${nextBid / 100}#bid`}>Outbid for {formatMoney(nextBid)}</Link>
         <CopyButton />
       </div>

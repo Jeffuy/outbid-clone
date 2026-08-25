@@ -46,7 +46,19 @@ export default function BidBox({ initialAmount }) {
             <input className="amount-input" type="number" min={MIN} max={MAX} step="1" value={amount} onChange={(event) => updateAmount(event.target.value)} aria-label="Target bid total in US dollars" required />
           </label>
           <button className="amount-button" type="button" onClick={() => updateAmount(amount + 1)} aria-label="Increase bid">+</button>
-          <input className="url-input" type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Your product URL" aria-label="Your product URL" required />
+          <input
+            className="url-input"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder="example.com"
+            aria-label="Your product URL"
+            required
+          />
           <button className="primary-button" type="submit" disabled={loading}>{loading ? "Opening PayPal…" : "Outbid"}</button>
         </div>
         {error && <p className="form-error" role="alert">{error}</p>}

@@ -13,8 +13,6 @@ export default function PrivacyPage() {
       <p>Outbound visits pass through our redirect route. Obvious repeat clicks are filtered using short-lived, one-way identity hashes; raw IP addresses are not stored in the click or rate-limit records.</p>
       <h2>Payments and storage</h2>
       <p>PayPal processes payment details. We store PayPal order and capture references, bid amounts, payment status, submitted URLs, and timestamps in Supabase. We do not receive or store payment card details.</p>
-      <h2>Contact</h2>
-      <p>Questions can be sent to <a href={`mailto:${siteConfig.contactEmail}`}>{siteConfig.contactEmail}</a>. Operator: {siteConfig.operatorName}, {siteConfig.operatorAddress}.</p>
     </article>
   );
 }

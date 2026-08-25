@@ -45,7 +45,15 @@ export default async function Home({ searchParams }) {
               <h2>Latest activity</h2>
               {activity.map((item) => (
                 <p key={item.id}>
-                  {item.host} at #{item.overall_rank} · {formatMoney(item.target_total_cents)} · {timeAgo(item.completed_at)}
+                  <a
+                    className="hostname-link"
+                    href={`/go/${item.listing_id}`}
+                    target="_blank"
+                    rel="sponsored nofollow noopener"
+                  >
+                    {item.host}
+                  </a>{" "}
+                  at #{item.overall_rank} · {formatMoney(item.target_total_cents)} · {timeAgo(item.completed_at)}
                 </p>
               ))}
             </section>
